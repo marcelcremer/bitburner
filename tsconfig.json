@@ -11,12 +11,9 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "sourceMap": true,
-    "baseUrl": ".",
+    "baseUrl": "src",
     "outDir": "./dist",
     "types": ["jest"],
-    "paths": {
-      "@/*": ["src/*"]
-    },
     "lib": ["esnext", "dom", "dom.iterable", "scripthost"]
   },
   "include": ["src/**/*.ts"],
