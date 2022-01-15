@@ -1,5 +1,7 @@
-export const reducePromises = (...promises: Promise<any>[]) => {
-  return promises.reduce((prev, cur) => {
-    return prev.then(() => cur);
+export const reducePromises = async (...promises: Promise<any>[]) => {
+  return promises.reduce(async (prev, cur, i) => {
+    await prev;
+    console.log({ prev, cur, i });
+    return cur;
   }, Promise.resolve());
 };

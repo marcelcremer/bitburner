@@ -4,13 +4,16 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "serve": "npx tsc -w"
+    "serve": "tsc -w",
+    "test": "jest --watch"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/jest": "^27.4.0",
     "jest": "^27.4.7",
+    "ts-jest": "^27.1.3",
     "typescript": "^4.5.4"
   }
 }

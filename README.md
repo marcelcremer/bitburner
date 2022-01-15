@@ -15,7 +15,7 @@ npm i
 - Run the compilation process:
 
 ```
-npm serve
+npm run serve
 ```
 
 Edit the code and have fun!
