@@ -58,8 +58,6 @@ class Uploader {
   }
 
   async deploy(targetServer: string): Promise<void> {
-    if (this.ns.fileExists(UPLOAD_SCRIPT, targetServer)) return;
-
     this.log(`Spawning modules at ${targetServer}`);
     await this.uploadScriptsToTargetServer(targetServer);
 

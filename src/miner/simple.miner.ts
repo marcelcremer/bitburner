@@ -1,5 +1,8 @@
 import { NS } from '../types';
 
+const MONEY_THRESHOLD = 0.75;
+const SECURITY_THRESHOLD = 5;
+
 export async function main(ns: NS) {
   const miner = new SimpleMiner(ns);
   while (true) {
@@ -13,29 +16,29 @@ export async function main(ns: NS) {
 }
 
 class SimpleMiner {
-  target_server = '';
+  targetServer = '';
 
   ns: NS;
 
   constructor(ns: NS) {
     this.ns = ns;
-    this.target_server = <string>ns.args[0];
+    this.targetServer = <string>ns.args[0];
   }
 
   async process(): Promise<void> {
     const intel = this.getServerInformation();
-    if (intel.security > 1.1) await this.weakenSecurity();
-    else await this.ns.hack(this.target_server);
-    this.ns.print(intel.security > 1.5 ? 'weakened' : 'hacked');
+    // this.ns.tprint({ intel });
+    if (intel.security >= intel.minSecurity + SECURITY_THRESHOLD) await this.ns.weaken(this.targetServer);
+    else if (intel.availableMoney < intel.maxMoney * MONEY_THRESHOLD) await this.ns.grow(this.targetServer);
+    else await this.ns.hack(this.targetServer);
   }
 
-  getServerInformation(): { security: number } {
+  getServerInformation() {
     return {
-      security: this.ns.getServerSecurityLevel(this.target_server),
+      minSecurity: this.ns.getServerMinSecurityLevel(this.targetServer),
+      security: this.ns.getServerSecurityLevel(this.targetServer),
+      availableMoney: this.ns.getServerMoneyAvailable(this.targetServer),
+      maxMoney: this.ns.getServerMaxMoney(this.targetServer),
     };
-  }
-
-  async weakenSecurity(): Promise<number> {
-    return this.ns.weaken(this.target_server);
   }
 }
