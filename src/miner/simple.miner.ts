@@ -3,7 +3,12 @@ import { NS } from '../types';
 export async function main(ns: NS) {
   const miner = new SimpleMiner(ns);
   while (true) {
-    await miner.process();
+    try {
+      await miner.process();
+    } catch (e) {
+      ns.tprint('Something went horribly wrong!', e);
+      break;
+    }
   }
 }
 
