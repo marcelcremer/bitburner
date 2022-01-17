@@ -2,6 +2,8 @@ import { reducePromises } from 'utils/functions/reduce-promises.function';
 import { NS } from '../types';
 
 const MINING_SCRIPT = 'miner/simple.miner.js';
+const HACK_EXP_GRINDER_SCRIPT = 'grinder/hack-exp.grinder.js';
+const TARGET_SCRIPT = MINING_SCRIPT;
 const UPLOAD_SCRIPT = 'uploader/simple.uploader.js';
 
 class Uploader {
@@ -62,15 +64,16 @@ class Uploader {
     await this.uploadScriptsToTargetServer(targetServer);
 
     this.log(`Upload completed! Trying to replicate...`);
-    // const freeRam = this.ns.getServerMaxRam(targetServer) - this.ns.getServerUsedRam(targetServer);
-    // this.log(`Free RAM on ${targetServer} is ${freeRam}GB`);
     if (this.ns.getServerMaxRam(targetServer) > 5) this.replicateSelf(targetServer);
     else this.log(`Victim ${targetServer} has not enough RAM to replicate`);
-
-    this.targets.forEach((victim) => {
+    this.targets.forEach((victim, i, arr) => {
+      if (victim == targetServer) return;
+      const freeRam = this.ns.getServerMaxRam(targetServer) - this.ns.getServerUsedRam(targetServer);
+      let threads = 1;
+      if (!arr[i + 1]) threads = Math.floor(freeRam / this.ns.getScriptRam(`/${TARGET_SCRIPT}`, targetServer));
       try {
-        if (this.ns.exec(MINING_SCRIPT, targetServer, 1, victim) == 0) throw new Error(`Spawning of script ${MINING_SCRIPT} on ${targetServer} for victim ${victim} failed!`);
-        else this.log(`Spawned script ${MINING_SCRIPT} on ${targetServer} for victim ${victim}!`);
+        if (this.ns.exec(TARGET_SCRIPT, targetServer, threads, victim) == 0) throw new Error(`Spawning of script ${TARGET_SCRIPT} on ${targetServer} for victim ${victim} failed!`);
+        else this.log(`Spawned script ${TARGET_SCRIPT} on ${targetServer} for victim ${victim}!`);
       } catch (e) {
         this.log(`Cannot spawn process: ${(<Error>e).message}`);
       }
@@ -78,7 +81,7 @@ class Uploader {
   }
 
   private async uploadScriptsToTargetServer(targetServer: string) {
-    await this.ns.scp(`/${MINING_SCRIPT}`, this.currentHost, targetServer);
+    await this.ns.scp(`/${TARGET_SCRIPT}`, this.currentHost, targetServer);
     await this.ns.scp(`/${UPLOAD_SCRIPT}`, this.currentHost, targetServer);
   }
 
