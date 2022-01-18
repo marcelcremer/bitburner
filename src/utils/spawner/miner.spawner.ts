@@ -9,6 +9,7 @@ const log = (ns: NS, ...args) => ns.tprint(...args);
 async function deploy(ns: NS, targetServer: string, victim: string): Promise<void> {
   log(ns, `Spawning modules at ${targetServer}...`);
   let threads = Math.floor(ns.getServerMaxRam(targetServer) / ns.getScriptRam(`/${TARGET_SCRIPT}`, targetServer));
+  if (targetServer == 'home') ns.spawn(`/${TARGET_SCRIPT}`, threads, targetServer);
   await ns.scp(`/${TARGET_SCRIPT}`, 'home', targetServer);
   ns.killall(targetServer);
   log(ns, `${threads} Threads possible...`);

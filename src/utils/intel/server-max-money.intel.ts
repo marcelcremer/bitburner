@@ -12,12 +12,14 @@ function discoverTargets(ns, origin = 'home', targets: string[] = []): string[] 
 }
 
 export async function main(ns: NS) {
-  const maxServer = discoverTargets(ns)
+  ns.tprint(`Top 5 servers by max money:`);
+  discoverTargets(ns)
     .map((host) => ({
       host,
       amount: ns.getServerMaxMoney(host),
     }))
     .filter((entry) => ns.getServerRequiredHackingLevel(entry.host) < ns.getHackingLevel())
-    .reduce((prev, cur) => (prev.amount > cur.amount ? prev : cur), { host: '', amount: 0 });
-  ns.tprint(`Server with max Amount: ${maxServer.host} (${maxServer.amount})`);
+    .sort((prev, cur) => (prev.amount > cur.amount ? -1 : prev.amount == cur.amount ? 0 : 1))
+    .filter((x, i) => i < 5)
+    .forEach((entry, i) => ns.tprint(`${i + 1}: ${entry.host} (${entry.amount})`));
 }
