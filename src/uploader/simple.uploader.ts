@@ -26,6 +26,11 @@ class Uploader {
   async nukeThemAll(): Promise<string[]> {
     let nukedTargets: string[] = [];
     let triedScripts: string[];
+
+    this.log(
+      `Next lowest hacking level: ${Math.min(...this.targets.map((entry) => this.ns.getServerRequiredHackingLevel(entry)).filter((level) => level > this.ns.getHackingLevel()))}`
+    );
+
     for (let victim of this.targets) {
       triedScripts = [];
       if (this.ns.getServerRequiredHackingLevel(victim) > this.ns.getHackingLevel()) continue;
