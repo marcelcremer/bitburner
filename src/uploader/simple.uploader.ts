@@ -15,11 +15,12 @@ class Uploader {
 
   constructor(initialValues: Partial<Uploader>) {
     if (initialValues) Object.assign(this, initialValues);
+    this.targets = this.discoverTargets();
   }
 
   async run() {
     const nukedTargets = await this.nukeThemAll();
-    await this.deployEverywhere(nukedTargets);
+    await this.deployEverywhere(nukedTargets.filter((entry) => entry != 'home').concat('home'));
   }
 
   async nukeThemAll(): Promise<string[]> {
@@ -28,11 +29,16 @@ class Uploader {
     for (let victim of this.targets) {
       triedScripts = [];
       if (this.ns.getServerRequiredHackingLevel(victim) > this.ns.getHackingLevel()) continue;
+      this.log(`
+☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢
+Trying to NUKE target ${victim}...
+☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢
+`);
       while (this.availableScripts.filter((script) => triedScripts.indexOf(script) == -1).length > 0) {
-        this.log(this.availableScripts, this.availableScripts.filter((script) => triedScripts.indexOf(script) == -1).length);
         try {
           await this.ns.nuke(victim);
           nukedTargets.push(victim);
+          this.log(`Success!`);
           break;
         } catch (e) {
           this.log(e);
@@ -46,10 +52,12 @@ class Uploader {
         }
       }
     }
+
     return nukedTargets;
   }
 
   async deployEverywhere(nukedTargets: string[]) {
+    console.log('order', nukedTargets);
     for (let victim of nukedTargets) {
       try {
         await this.deploy(victim);
@@ -60,56 +68,47 @@ class Uploader {
   }
 
   async deploy(targetServer: string): Promise<void> {
-    this.log(`Spawning modules at ${targetServer}`);
-    await this.uploadScriptsToTargetServer(targetServer);
-
-    this.log(`Upload completed! Trying to replicate...`);
-    if (this.ns.getServerMaxRam(targetServer) > 5) this.replicateSelf(targetServer);
-    else this.log(`Victim ${targetServer} has not enough RAM to replicate`);
-    this.targets.forEach((victim, i, arr) => {
-      if (victim == targetServer) return;
-      const freeRam = this.ns.getServerMaxRam(targetServer) - this.ns.getServerUsedRam(targetServer);
-      let threads = 1;
-      if (!arr[i + 1]) threads = Math.floor(freeRam / this.ns.getScriptRam(`/${TARGET_SCRIPT}`, targetServer));
-      try {
-        if (this.ns.exec(TARGET_SCRIPT, targetServer, threads, victim) == 0) throw new Error(`Spawning of script ${TARGET_SCRIPT} on ${targetServer} for victim ${victim} failed!`);
-        else this.log(`Spawned script ${TARGET_SCRIPT} on ${targetServer} for victim ${victim}!`);
-      } catch (e) {
-        this.log(`Cannot spawn process: ${(<Error>e).message}`);
-      }
-    });
-  }
-
-  private async uploadScriptsToTargetServer(targetServer: string) {
+    this.log(`Spawning modules at ${targetServer}...`);
+    let threads = Math.floor(this.ns.getServerMaxRam(targetServer) / this.ns.getScriptRam(`/${TARGET_SCRIPT}`, targetServer));
+    if (targetServer == 'home') {
+      this.log('Terminating and spawning miner...');
+      this.ns.spawn(`/${TARGET_SCRIPT}`, threads, 'home');
+    }
     await this.ns.scp(`/${TARGET_SCRIPT}`, this.currentHost, targetServer);
-    await this.ns.scp(`/${UPLOAD_SCRIPT}`, this.currentHost, targetServer);
-  }
-
-  private replicateSelf(targetServer: string) {
-    this.log(`Killing all foreign processes...`);
     this.ns.killall(targetServer);
-    if (this.ns.exec(UPLOAD_SCRIPT, targetServer, 1, targetServer, this.currentHost) == 0)
-      this.log(`Spawning of script ${UPLOAD_SCRIPT} on ${targetServer} for targetServer ${targetServer} failed!`);
-    else this.log(`Next uploader started successfully!`);
+    this.log(`${threads} Threads possible...`);
+    try {
+      if (this.ns.exec(TARGET_SCRIPT, targetServer, threads, targetServer) == 0) throw new Error(`Spawning of script ${TARGET_SCRIPT} on ${targetServer} failed!`);
+      else this.log(`Deployment of script ${TARGET_SCRIPT} on ${targetServer} successful!`);
+    } catch (e) {
+      this.log(`Cannot spawn process: ${(<Error>e).message}`);
+    }
   }
 
   log(...data: any[]) {
     console.log(`[${this.origin}->${this.currentHost}]`, ...data);
     this.ns.tprint(`[${this.origin}->${this.currentHost}]`, ...data);
   }
+
+  private discoverTargets(origin = 'home', targets: string[] = []): string[] {
+    const newTargets = this.ns
+      .scan(origin)
+      .filter((host) => host != origin)
+      .filter((host) => targets.indexOf(host) == -1);
+    let fullTargets = targets.concat(newTargets);
+    return fullTargets
+      .concat(newTargets.map((host) => this.discoverTargets(host, fullTargets)).reduce((prev, cur) => prev.concat(cur), []))
+      .filter((entry, index, arr) => arr.findIndex((x) => x == entry) == index);
+  }
 }
 
 export async function main(ns: NS) {
   const currentHost = ns.args[0] ? <string>ns.args[0] || 'home' : 'home';
   const origin = ns.args[1] ? <string>ns.args[1] || 'home' : 'home';
-  const targets = ns.scan(currentHost).filter((host) => host != origin);
   const uploader = new Uploader({
     ns,
-    targets,
     currentHost,
     origin,
   });
-  uploader.log(`Spawning`, { origin, currentHost });
-
   await uploader.run();
 }
