@@ -7,10 +7,10 @@ const TARGET_SCRIPT = MINING_SCRIPT;
 const log = (ns: NS, ...args) => ns.tprint(...args);
 
 async function deploy(ns: NS, targetServer: string, victim: string): Promise<void> {
+  if (targetServer != 'home') await ns.scp(`/${TARGET_SCRIPT}`, 'home', targetServer);
   log(ns, `Spawning modules at ${targetServer}...`);
   let threads = Math.floor(ns.getServerMaxRam(targetServer) / ns.getScriptRam(`/${TARGET_SCRIPT}`, targetServer));
   if (targetServer == 'home') ns.spawn(`/${TARGET_SCRIPT}`, threads, targetServer);
-  await ns.scp(`/${TARGET_SCRIPT}`, 'home', targetServer);
   ns.killall(targetServer);
   log(ns, `${threads} Threads possible...`);
   try {

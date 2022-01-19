@@ -83,7 +83,12 @@ Trying to NUKE target ${victim}...
     this.ns.killall(targetServer);
     this.log(`${threads} Threads possible...`);
     try {
-      if (this.ns.exec(TARGET_SCRIPT, targetServer, threads, targetServer) == 0) throw new Error(`Spawning of script ${TARGET_SCRIPT} on ${targetServer} failed!`);
+      let victim = targetServer;
+      if (targetServer == 'home' || targetServer.startsWith('bot')) {
+        const otherServers = this.targets.filter((server) => server != 'home' && !server.startsWith('bot'));
+        victim = otherServers[Math.random() * otherServers.length];
+      }
+      if (this.ns.exec(TARGET_SCRIPT, targetServer, threads, victim) == 0) throw new Error(`Spawning of script ${TARGET_SCRIPT} on ${targetServer} failed!`);
       else this.log(`Deployment of script ${TARGET_SCRIPT} on ${targetServer} successful!`);
     } catch (e) {
       this.log(`Cannot spawn process: ${(<Error>e).message}`);
