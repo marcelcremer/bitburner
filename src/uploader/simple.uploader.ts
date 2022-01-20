@@ -76,8 +76,9 @@ Trying to NUKE target ${victim}...
     this.log(`Spawning modules at ${targetServer}...`);
     let threads = Math.floor(this.ns.getServerMaxRam(targetServer) / this.ns.getScriptRam(`/${TARGET_SCRIPT}`, targetServer));
     if (targetServer == 'home') {
-      this.log('Terminating and spawning miner...');
-      this.ns.spawn(`/${TARGET_SCRIPT}`, threads, 'home');
+      const victim = this.getRandomServer();
+      this.log(`Terminating and spawning miner for ${victim}...`);
+      this.ns.spawn(`/${TARGET_SCRIPT}`, threads, victim);
     }
     await this.ns.scp(`/${TARGET_SCRIPT}`, this.currentHost, targetServer);
     this.ns.killall(targetServer);
@@ -85,14 +86,18 @@ Trying to NUKE target ${victim}...
     try {
       let victim = targetServer;
       if (targetServer == 'home' || targetServer.startsWith('bot')) {
-        const otherServers = this.targets.filter((server) => server != 'home' && !server.startsWith('bot'));
-        victim = otherServers[Math.random() * otherServers.length];
+        victim = this.getRandomServer();
       }
       if (this.ns.exec(TARGET_SCRIPT, targetServer, threads, victim) == 0) throw new Error(`Spawning of script ${TARGET_SCRIPT} on ${targetServer} failed!`);
       else this.log(`Deployment of script ${TARGET_SCRIPT} on ${targetServer} successful!`);
     } catch (e) {
       this.log(`Cannot spawn process: ${(<Error>e).message}`);
     }
+  }
+
+  getRandomServer() {
+    const otherServers = this.targets.filter((server) => server != 'home' && !server.startsWith('bot'));
+    return otherServers[Math.floor(Math.random() * otherServers.length)];
   }
 
   log(...data: any[]) {

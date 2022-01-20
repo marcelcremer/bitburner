@@ -10,7 +10,7 @@ async function deploy(ns: NS, targetServer: string, victim: string): Promise<voi
   if (targetServer != 'home') await ns.scp(`/${TARGET_SCRIPT}`, 'home', targetServer);
   log(ns, `Spawning modules at ${targetServer}...`);
   let threads = Math.floor(ns.getServerMaxRam(targetServer) / ns.getScriptRam(`/${TARGET_SCRIPT}`, targetServer));
-  if (targetServer == 'home') ns.spawn(`/${TARGET_SCRIPT}`, threads, targetServer);
+  if (targetServer == 'home') ns.spawn(`/${TARGET_SCRIPT}`, threads, victim);
   ns.killall(targetServer);
   log(ns, `${threads} Threads possible...`);
   try {
