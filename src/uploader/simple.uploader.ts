@@ -49,8 +49,10 @@ class Uploader {
           break;
         } catch (e) {
           this.log(e);
-          const nextScript = this.availableScripts.find((script) => triedScripts.indexOf(script) == -1) || '';
+          const nextScript = this.availableScripts.find((script) => triedScripts.indexOf(script) == -1);
+          if (!nextScript) break;
           triedScripts.push(nextScript);
+
           if (!this.ns.fileExists(`${nextScript}.exe`, 'home')) continue;
           this.ns[nextScript](victim);
           continue;

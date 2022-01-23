@@ -9,7 +9,6 @@ const orderIfPossible = (ns: NS, ram: number) => {
   }
   ns.tprint(`Bought Server with name ${newServer}`);
   const victim = getRandomServer(ns);
-  ns.run('utils/spawner/miner.spawner.js', 1, getRandomServer(ns));
   spawnOnServer(ns, newServer, victim);
   ns.tprint(`${newServer} attacking ${victim}`);
 };
@@ -23,7 +22,8 @@ const upgradeServer = (ns: NS, host, ram: number) => {
 
 const spawnOnServer = (ns: NS, target: string, victim: string) => {
   ns.killall(target);
-  ns.run('utils/spawner/miner.spawner.js', 1, target, victim);
+  const spawned = ns.run('utils/spawner/miner.spawner.js', 1, target, victim);
+  ns.tprint({ target, victim, spawned });
 };
 
 const getMaxRamAffordable = (ns: NS) => {
@@ -41,6 +41,7 @@ const getPurchasedServers = (ns: NS) => {
 
 export async function main(ns: NS) {
   let ram = +ns.args[0] ? +ns.args[0] : getMaxRamAffordable(ns);
+  if (ram == 1) ram = 2;
   let purchasedServers = getPurchasedServers(ns);
   purchasedServers.forEach((entry) => spawnOnServer(ns, entry.host, getRandomServer(ns, true)));
   while (true) {
