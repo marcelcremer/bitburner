@@ -1,19 +1,9 @@
 import { NS } from '../../types';
-
-function discoverTargets(ns, origin = 'home', targets: string[] = []): string[] {
-  const newTargets = ns
-    .scan(origin)
-    .filter((host) => host != origin)
-    .filter((host) => targets.indexOf(host) == -1);
-  let fullTargets = targets.concat(newTargets);
-  return fullTargets
-    .concat(newTargets.map((host) => discoverTargets(ns, host, fullTargets)).reduce((prev, cur) => prev.concat(cur), []))
-    .filter((entry, index, arr) => arr.findIndex((x) => x == entry) == index);
-}
+import { discoverServers } from 'utils/functions/discover-servers.function';
 
 export async function main(ns: NS) {
   ns.tprint(`Top 5 servers by max money:`);
-  discoverTargets(ns)
+  discoverServers(ns)
     .map((host) => ({
       host,
       amount: ns.getServerMaxMoney(host),

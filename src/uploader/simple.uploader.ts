@@ -1,3 +1,5 @@
+import { discoverServers } from 'utils/functions/discover-servers.function';
+import { getRandomServer } from 'utils/functions/get-random-server.function';
 import { reducePromises } from 'utils/functions/reduce-promises.function';
 import { NS } from '../types';
 
@@ -9,50 +11,48 @@ const UPLOAD_SCRIPT = 'uploader/simple.uploader.js';
 class Uploader {
   targets: string[] = [];
   ns: NS = <any>{};
-  availableScripts = ['brutessh', 'ftpcrack'];
+  availableScripts = ['brutessh', 'ftpcrack', 'relaysmtp', 'httpworm', 'sqlinject'];
   currentHost = 'home';
   origin = 'home';
+  nextLevel = 0;
 
   constructor(initialValues: Partial<Uploader>) {
     if (initialValues) Object.assign(this, initialValues);
-    this.targets = this.discoverTargets();
+    this.targets = discoverServers(this.ns);
   }
 
   async run() {
-    const nukedTargets = await this.nukeThemAll();
-    await this.deployEverywhere(nukedTargets.filter((entry) => entry != 'home').concat('home'));
+    while (true) {
+      if (this.nextLevel > this.ns.getHackingLevel()) await this.ns.sleep(1000);
+      else {
+        const nukedTargets = await this.nukeThemAll();
+        await this.deployEverywhere(nukedTargets.filter((entry) => entry != 'home').concat('home'));
+      }
+    }
   }
 
   async nukeThemAll(): Promise<string[]> {
     let nukedTargets: string[] = [];
     let triedScripts: string[];
 
-    this.log(
-      `Next lowest hacking level: ${Math.min(...this.targets.map((entry) => this.ns.getServerRequiredHackingLevel(entry)).filter((level) => level > this.ns.getHackingLevel()))}`
-    );
+    this.nextLevel = Math.min(...this.targets.map((entry) => this.ns.getServerRequiredHackingLevel(entry)).filter((level) => level > this.ns.getHackingLevel()));
+
+    this.log(`Next lowest hacking level: ${this.nextLevel}`);
 
     for (let victim of this.targets) {
       triedScripts = [];
       if (this.ns.getServerRequiredHackingLevel(victim) > this.ns.getHackingLevel()) continue;
-      this.log(`
-☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢
-Trying to NUKE target ${victim}...
-☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢☢
-`);
-      while (this.availableScripts.filter((script) => triedScripts.indexOf(script) == -1).length > 0) {
+      while (this.availableScripts.filter((script) => triedScripts.indexOf(script) == -1).length >= 0) {
         try {
           await this.ns.nuke(victim);
           nukedTargets.push(victim);
-          this.log(`Success!`);
           break;
         } catch (e) {
           this.log(e);
           const nextScript = this.availableScripts.find((script) => triedScripts.indexOf(script) == -1) || '';
           triedScripts.push(nextScript);
-          this.log(`As NUKE was unsuccessful, trying to open a port with ${nextScript}...`);
           if (!this.ns.fileExists(`${nextScript}.exe`, 'home')) continue;
           this.ns[nextScript](victim);
-          this.log(`${nextScript} executed!`);
           continue;
         }
       }
@@ -65,6 +65,7 @@ Trying to NUKE target ${victim}...
     console.log('order', nukedTargets);
     for (let victim of nukedTargets) {
       try {
+        if (victim == 'home' || victim.startsWith('bot')) continue;
         await this.deploy(victim);
       } catch (e) {
         this.log(e);
@@ -73,47 +74,20 @@ Trying to NUKE target ${victim}...
   }
 
   async deploy(targetServer: string): Promise<void> {
-    this.log(`Spawning modules at ${targetServer}...`);
     let threads = Math.floor(this.ns.getServerMaxRam(targetServer) / this.ns.getScriptRam(`/${TARGET_SCRIPT}`, targetServer));
-    if (targetServer == 'home') {
-      const victim = this.getRandomServer();
-      this.log(`Terminating and spawning miner for ${victim}...`);
-      this.ns.spawn(`/${TARGET_SCRIPT}`, threads, victim);
-    }
+    if (threads == 0) return;
     await this.ns.scp(`/${TARGET_SCRIPT}`, this.currentHost, targetServer);
     this.ns.killall(targetServer);
-    this.log(`${threads} Threads possible...`);
     try {
-      let victim = targetServer;
-      if (targetServer == 'home' || targetServer.startsWith('bot')) {
-        victim = this.getRandomServer();
-      }
-      if (this.ns.exec(TARGET_SCRIPT, targetServer, threads, victim) == 0) throw new Error(`Spawning of script ${TARGET_SCRIPT} on ${targetServer} failed!`);
-      else this.log(`Deployment of script ${TARGET_SCRIPT} on ${targetServer} successful!`);
+      if (this.ns.exec(TARGET_SCRIPT, targetServer, threads, targetServer) == 0) throw new Error();
     } catch (e) {
-      this.log(`Cannot spawn process: ${(<Error>e).message}`);
+      this.log(`Spawning of script ${TARGET_SCRIPT} on ${targetServer} failed! Error: ${(<Error>e).message}`);
     }
-  }
-
-  getRandomServer() {
-    const otherServers = this.targets.filter((server) => server != 'home' && !server.startsWith('bot'));
-    return otherServers[Math.floor(Math.random() * otherServers.length)];
   }
 
   log(...data: any[]) {
-    console.log(`[${this.origin}->${this.currentHost}]`, ...data);
-    this.ns.tprint(`[${this.origin}->${this.currentHost}]`, ...data);
-  }
-
-  private discoverTargets(origin = 'home', targets: string[] = []): string[] {
-    const newTargets = this.ns
-      .scan(origin)
-      .filter((host) => host != origin)
-      .filter((host) => targets.indexOf(host) == -1);
-    let fullTargets = targets.concat(newTargets);
-    return fullTargets
-      .concat(newTargets.map((host) => this.discoverTargets(host, fullTargets)).reduce((prev, cur) => prev.concat(cur), []))
-      .filter((entry, index, arr) => arr.findIndex((x) => x == entry) == index);
+    console.log(`[${this.origin}]`, ...data);
+    this.ns.tprint(`[${this.origin}]`, ...data);
   }
 }
 
